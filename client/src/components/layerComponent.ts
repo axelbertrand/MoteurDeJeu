@@ -4,9 +4,6 @@ import { IDisplayComponent } from "../systems/displaySystem";
 import { Component } from "./component";
 import { SpriteComponent } from "./spriteComponent";
 import { TextureComponent } from "./textureComponent";
-import { PositionComponent } from "./positionComponent";
-import { IFrameEntry } from "./spriteSheetComponent";
-import { Timing } from "../timing";
 
 let GL: WebGLRenderingContext;
 
@@ -15,24 +12,32 @@ let GL: WebGLRenderingContext;
 // doivent normalement être considérées comme étant sur un
 // même plan.
 export class LayerComponent extends Component<object> implements IDisplayComponent {
-  private descr!: IFrameEntry;
   private vertexBuffer!: WebGLBuffer;
   private vertices!: Float32Array;
   private indexBuffer!: WebGLBuffer;
 
-  public setup() {
-    GL = GraphicsAPI.context;
-
+  // ## Méthode *display*
+  // La méthode *display* est appelée une fois par itération
+  // de la boucle de jeu.
+  public display(dT: number) {
     const layerSprites = this.listSprites();
-    if(layerSprites.length === 0) {
+    if (layerSprites.length === 0) {
       return;
     }
+    const spriteSheet = layerSprites[0].spriteSheet;
+
+    GL = GraphicsAPI.context;
 
     // On crée ici un tableau de 4 vertices permettant de représenter
     // le rectangle à afficher.
     this.vertexBuffer = GL.createBuffer()!;
     GL.bindBuffer(GL.ARRAY_BUFFER, this.vertexBuffer);
-    this.vertices = new Float32Array(4 * TextureComponent.vertexSize * layerSprites.length);
+
+    const vertices: number[] = [];
+    layerSprites.forEach((sprite, index) => {
+      vertices.push(...sprite.getVertices().values());
+    });
+    this.vertices = new Float32Array(vertices);
     GL.bufferData(GL.ARRAY_BUFFER, this.vertices, GL.DYNAMIC_DRAW);
 
     this.indexBuffer = GL.createBuffer()!;
@@ -60,65 +65,12 @@ export class LayerComponent extends Component<object> implements IDisplayCompone
     const indices = new Uint16Array(indicesArray);
     GL.bufferData(GL.ELEMENT_ARRAY_BUFFER, indices, GL.DYNAMIC_DRAW);
 
-    // Et on initialise le contenu des vertices
-    layerSprites.forEach(sprite => {
-      sprite.updateMesh();
-    });
-  }
-
-  // public update(timing: Timing) {
-  //   const layerSprites = this.listSprites();
-  //   layerSprites.forEach(sprite => {
-  //     const descr = sprite.spriteSheet.sprites[sprite.spriteName];
-  //     this.updateComponents(descr);
-  //   });
-  // }
-
-  // ## Méthode *display*
-  // La méthode *display* est appelée une fois par itération
-  // de la boucle de jeu.
-  public display(dT: number) {
-    const layerSprites = this.listSprites();
-    if (layerSprites.length === 0) {
-      return;
-    }
-    const spriteSheet = layerSprites[0].spriteSheet;
-
     GL.bindBuffer(GL.ARRAY_BUFFER, this.vertexBuffer);
     GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
     spriteSheet.bind();
     GL.drawElements(GL.TRIANGLES, 6, GL.UNSIGNED_SHORT, 0);
     spriteSheet.unbind();
   }
-
-  // private updateComponents(descr: IFrameEntry) {
-  //   const position = this.owner.getComponent<PositionComponent>("Position").worldPosition;
-  //   if (this.vertices.length === 0) {
-  //     return;
-  //   }
-
-  //   const z = position[2];
-  //   const xMin = position[0];
-  //   const xMax = xMin + descr.frame.w;
-  //   const yMax = position[1];
-  //   const yMin = yMax - descr.frame.h;
-  //   const uMin = descr.uv!.x;
-  //   const uMax = uMin + descr.uv!.w;
-  //   const vMin = descr.uv!.y;
-  //   const vMax = vMin + descr.uv!.h;
-
-  //   const v = [
-  //     xMin, yMin, z, uMin, vMin,
-  //     xMax, yMin, z, uMax, vMin,
-  //     xMax, yMax, z, uMax, vMax,
-  //     xMin, yMax, z, uMin, vMax,
-  //   ];
-
-  //   const offset = 0;
-  //   this.vertices.set(v, offset);
-  //   GL.bindBuffer(GL.ARRAY_BUFFER, this.vertexBuffer);
-  //   GL.bufferSubData(GL.ARRAY_BUFFER, offset, this.vertices);
-  // }
 
   // ## Fonction *listSprites*
   // Cette fonction retourne une liste comportant l'ensemble

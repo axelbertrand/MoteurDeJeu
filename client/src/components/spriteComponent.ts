@@ -5,6 +5,7 @@ import { Timing } from "../timing";
 import { Component } from "./component";
 import { PositionComponent } from "./positionComponent";
 import { IFrameEntry, ISize, SpriteSheetComponent } from "./spriteSheetComponent";
+import { TextureComponent } from "./textureComponent";
 
 let GL: WebGLRenderingContext;
 
@@ -56,6 +57,10 @@ export class SpriteComponent extends Component<ISpriteComponentDesc> implements 
 
     // On récupère ici la feuille de sprite correspondant à ce composant.
     this.spriteSheet = Component.findComponent<SpriteSheetComponent>(descr.spriteSheet)!;
+    this.vertices = new Float32Array(4 * TextureComponent.vertexSize);
+    
+    // Et on initialise le contenu des vertices
+    this.updateMesh();
   }
 
   // ## Méthode *update*
@@ -93,6 +98,10 @@ export class SpriteComponent extends Component<ISpriteComponentDesc> implements 
     }
     this.descr = this.spriteSheet.sprites[spriteName];
     this.spriteSize = this.descr.sourceSize;
+  }
+
+  public getVertices(): Float32Array {
+    return this.vertices;
   }
 
   // ## Fonction *findNextFrameName*
@@ -143,7 +152,5 @@ export class SpriteComponent extends Component<ISpriteComponentDesc> implements 
 
     const offset = 0;
     this.vertices.set(v, offset);
-    GL.bindBuffer(GL.ARRAY_BUFFER, this.vertexBuffer);
-    GL.bufferSubData(GL.ARRAY_BUFFER, offset, this.vertices);
   }
 }
