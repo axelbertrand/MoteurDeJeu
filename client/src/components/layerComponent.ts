@@ -12,9 +12,6 @@ let GL: WebGLRenderingContext;
 // doivent normalement être considérées comme étant sur un
 // même plan.
 export class LayerComponent extends Component<object> implements IDisplayComponent {
-  private vertexBuffer!: WebGLBuffer;
-  private vertices!: Float32Array;
-  private indexBuffer!: WebGLBuffer;
 
   // ## Méthode *display*
   // La méthode *display* est appelée une fois par itération
@@ -30,22 +27,21 @@ export class LayerComponent extends Component<object> implements IDisplayCompone
 
     // On crée ici un tableau de 4 vertices permettant de représenter
     // le rectangle à afficher.
-    this.vertexBuffer = GL.createBuffer()!;
-    GL.bindBuffer(GL.ARRAY_BUFFER, this.vertexBuffer);
+    const vertexBuffer = GL.createBuffer()!;
+    GL.bindBuffer(GL.ARRAY_BUFFER, vertexBuffer);
 
-    const vertices: number[] = [];
+    const vertices = new Float32Array(4 * TextureComponent.vertexSize * layerSprites.length);
     layerSprites.forEach((sprite, index) => {
-      vertices.push(...sprite.getVertices().values());
+      const spriteVertices = sprite.getVertices();
+      vertices.set(spriteVertices, index * spriteVertices.length);
     });
-    this.vertices = new Float32Array(vertices);
-    GL.bufferData(GL.ARRAY_BUFFER, this.vertices, GL.DYNAMIC_DRAW);
+    GL.bufferData(GL.ARRAY_BUFFER, vertices, GL.DYNAMIC_DRAW);
 
-    this.indexBuffer = GL.createBuffer()!;
-    GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-    const indicesArray: number[] = [];
+    const indexBuffer = GL.createBuffer()!;
+    GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, indexBuffer);
 
-    let i = 0;
-    layerSprites.forEach(sprite => {
+    const indices = new Uint16Array(6 * layerSprites.length);
+    layerSprites.forEach((sprite, index) => {
       // On crée ici un tableau de 6 indices, soit 2 triangles, pour
       // représenter quels vertices participent à chaque triangle:
       // ```
@@ -58,17 +54,16 @@ export class LayerComponent extends Component<object> implements IDisplayCompone
       // +----+
       // 3    2
       // ```
-      
-      indicesArray.push(i, i + 1, i + 2, i + 2, i + 3, i);
-      i += 4;
+      const i = 4 * index;
+      indices.set([i, i + 1, i + 2, i + 2, i + 3, i], 6 * index);
     });
-    const indices = new Uint16Array(indicesArray);
+    
     GL.bufferData(GL.ELEMENT_ARRAY_BUFFER, indices, GL.DYNAMIC_DRAW);
 
-    GL.bindBuffer(GL.ARRAY_BUFFER, this.vertexBuffer);
-    GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+    GL.bindBuffer(GL.ARRAY_BUFFER, vertexBuffer);
+    GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, indexBuffer);
     spriteSheet.bind();
-    GL.drawElements(GL.TRIANGLES, 6, GL.UNSIGNED_SHORT, 0);
+    GL.drawElements(GL.TRIANGLES, 6 * layerSprites.length, GL.UNSIGNED_SHORT, 0);
     spriteSheet.unbind();
   }
 
