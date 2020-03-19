@@ -32,7 +32,7 @@ export class PhysicSystem implements ISystem {
           continue;
         }
 
-        if (c1.area.intersectsWith(c2.area)) {
+        if ((c1.flag & c2.mask) && c1.area.intersectsWith(c2.area)) {
           collisions.push([c1, c2]);
         }
       }

@@ -676,28 +676,7 @@ define("components/spriteComponent", ["require", "exports", "graphicsAPI", "comp
             GL = GraphicsAPI.context;
             // On récupère ici la feuille de sprite correspondant à ce composant.
             this.spriteSheet = component_7.Component.findComponent(descr.spriteSheet);
-            // On crée ici un tableau de 4 vertices permettant de représenter
-            // le rectangle à afficher.
-            this.vertexBuffer = GL.createBuffer();
-            GL.bindBuffer(GL.ARRAY_BUFFER, this.vertexBuffer);
             this.vertices = new Float32Array(4 * textureComponent_2.TextureComponent.vertexSize);
-            GL.bufferData(GL.ARRAY_BUFFER, this.vertices, GL.DYNAMIC_DRAW);
-            // On crée ici un tableau de 6 indices, soit 2 triangles, pour
-            // représenter quels vertices participent à chaque triangle:
-            // ```
-            // 0    1
-            // +----+
-            // |\   |
-            // | \  |
-            // |  \ |
-            // |   \|
-            // +----+
-            // 3    2
-            // ```
-            this.indexBuffer = GL.createBuffer();
-            GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-            const indices = new Uint16Array([0, 1, 2, 2, 3, 0]);
-            GL.bufferData(GL.ELEMENT_ARRAY_BUFFER, indices, GL.DYNAMIC_DRAW);
             // Et on initialise le contenu des vertices
             this.updateMesh();
         }
@@ -721,11 +700,6 @@ define("components/spriteComponent", ["require", "exports", "graphicsAPI", "comp
         // via la méthode *bind* de la feuille de sprite, sélectionne le
         // tableau de vertices et d'indices et fait l'appel de rendu.
         display() {
-            GL.bindBuffer(GL.ARRAY_BUFFER, this.vertexBuffer);
-            GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-            this.spriteSheet.bind();
-            GL.drawElements(GL.TRIANGLES, 6, GL.UNSIGNED_SHORT, 0);
-            this.spriteSheet.unbind();
         }
         // ## Méthode *updateMesh*
         // Cette méthode met à jour les informations relatives à la sprite
@@ -738,6 +712,9 @@ define("components/spriteComponent", ["require", "exports", "graphicsAPI", "comp
             }
             this.descr = this.spriteSheet.sprites[spriteName];
             this.spriteSize = this.descr.sourceSize;
+        }
+        getVertices() {
+            return this.vertices;
         }
         // ## Fonction *findNextFrameName*
         // La fonction *findNextFrameName* détermine le nom de la sprite
@@ -784,8 +761,6 @@ define("components/spriteComponent", ["require", "exports", "graphicsAPI", "comp
             ];
             const offset = 0;
             this.vertices.set(v, offset);
-            GL.bindBuffer(GL.ARRAY_BUFFER, this.vertexBuffer);
-            GL.bufferSubData(GL.ARRAY_BUFFER, offset, this.vertices);
         }
     }
     exports.SpriteComponent = SpriteComponent;
@@ -1319,9 +1294,10 @@ define("components/inputComponent", ["require", "exports", "components/component
         // Rien
     }
 });
-define("components/layerComponent", ["require", "exports", "components/component", "components/spriteComponent"], function (require, exports, component_15, spriteComponent_1) {
+define("components/layerComponent", ["require", "exports", "graphicsAPI", "components/component", "components/spriteComponent", "components/textureComponent"], function (require, exports, GraphicsAPI, component_15, spriteComponent_1, textureComponent_3) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    let GL;
     // # Classe *LayerComponent*
     // Ce composant représente un ensemble de sprites qui
     // doivent normalement être considérées comme étant sur un
@@ -1336,6 +1312,42 @@ define("components/layerComponent", ["require", "exports", "components/component
                 return;
             }
             const spriteSheet = layerSprites[0].spriteSheet;
+            GL = GraphicsAPI.context;
+            // On crée ici un tableau de 4 vertices permettant de représenter
+            // le rectangle à afficher.
+            const vertexBuffer = GL.createBuffer();
+            GL.bindBuffer(GL.ARRAY_BUFFER, vertexBuffer);
+            const vertices = new Float32Array(4 * textureComponent_3.TextureComponent.vertexSize * layerSprites.length);
+            layerSprites.forEach((sprite, index) => {
+                const spriteVertices = sprite.getVertices();
+                vertices.set(spriteVertices, index * spriteVertices.length);
+            });
+            GL.bufferData(GL.ARRAY_BUFFER, vertices, GL.DYNAMIC_DRAW);
+            const indexBuffer = GL.createBuffer();
+            GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, indexBuffer);
+            const indices = new Uint16Array(6 * layerSprites.length);
+            layerSprites.forEach((sprite, index) => {
+                // On crée ici un tableau de 6 indices, soit 2 triangles, pour
+                // représenter quels vertices participent à chaque triangle:
+                // ```
+                // 0    1
+                // +----+
+                // |\   |
+                // | \  |
+                // |  \ |
+                // |   \|
+                // +----+
+                // 3    2
+                // ```
+                const i = 4 * index;
+                indices.set([i, i + 1, i + 2, i + 2, i + 3, i], 6 * index);
+            });
+            GL.bufferData(GL.ELEMENT_ARRAY_BUFFER, indices, GL.DYNAMIC_DRAW);
+            GL.bindBuffer(GL.ARRAY_BUFFER, vertexBuffer);
+            GL.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, indexBuffer);
+            spriteSheet.bind();
+            GL.drawElements(GL.TRIANGLES, 6 * layerSprites.length, GL.UNSIGNED_SHORT, 0);
+            spriteSheet.unbind();
         }
         // ## Fonction *listSprites*
         // Cette fonction retourne une liste comportant l'ensemble
@@ -1793,11 +1805,11 @@ define("components/playerComponent", ["require", "exports", "gl-matrix", "eventT
     }
     exports.PlayerComponent = PlayerComponent;
 });
-define("components/rawSpriteComponent", ["require", "exports", "graphicsAPI", "components/textureComponent"], function (require, exports, GraphicsAPI, textureComponent_3) {
+define("components/rawSpriteComponent", ["require", "exports", "graphicsAPI", "components/textureComponent"], function (require, exports, GraphicsAPI, textureComponent_4) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     let GL;
-    class RawSpriteComponent extends textureComponent_3.TextureComponent {
+    class RawSpriteComponent extends textureComponent_4.TextureComponent {
         // ## Méthode *create*
         create(descr) {
             GL = GraphicsAPI.context;
@@ -1807,7 +1819,7 @@ define("components/rawSpriteComponent", ["require", "exports", "graphicsAPI", "c
             // le rectangle à afficher.
             this.vertexBuffer = GL.createBuffer();
             GL.bindBuffer(GL.ARRAY_BUFFER, this.vertexBuffer);
-            this.vertices = new Float32Array(4 * textureComponent_3.TextureComponent.vertexSize);
+            this.vertices = new Float32Array(4 * textureComponent_4.TextureComponent.vertexSize);
             GL.bufferData(GL.ARRAY_BUFFER, this.vertices, GL.DYNAMIC_DRAW);
             // On crée ici un tableau de 6 indices, soit 2 triangles, pour
             // représenter quels vertices participent à chaque triangle:
@@ -2367,7 +2379,7 @@ define("systems/physicSystem", ["require", "exports", "components/colliderCompon
                     if (!c2.enabled || !c2.owner.active) {
                         continue;
                     }
-                    if (c1.area.intersectsWith(c2.area)) {
+                    if ((c1.flag & c2.mask) && c1.area.intersectsWith(c2.area)) {
                         collisions.push([c1, c2]);
                     }
                 }

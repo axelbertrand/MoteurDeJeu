@@ -131,8 +131,8 @@
                 "spriteSheet": "ZeldaSprites.SpriteSheet"
               },
               "Collider": {
-                "flag": 1,
-                "mask": 6,
+                "flag": 4,
+                "mask": 3,
                 "size": {
                   "w": 16,
                   "h": 24
@@ -180,8 +180,8 @@
                 "spriteSheet": "ZeldaSprites.SpriteSheet"
               },
               "Collider": {
-                "flag": 1,
-                "mask": 6,
+                "flag": 4,
+                "mask": 3,
                 "size": {
                   "w": 16,
                   "h": 24
@@ -234,8 +234,8 @@
                         "frameSkip": 1
                       },
                       "Collider": {
-                        "flag": 4,
-                        "mask": 0,
+                        "flag": 1,
+                        "mask": 4,
                         "size": {
                           "w": 7,
                           "h": 7
@@ -260,8 +260,8 @@
                         "frameSkip": 2
                       },
                       "Collider": {
-                        "flag": 4,
-                        "mask": 0,
+                        "flag": 1,
+                        "mask": 4,
                         "size": {
                           "w": 8,
                           "h": 14
@@ -276,7 +276,7 @@
                 },
                 "Collider": {
                   "flag": 2,
-                  "mask": 1,
+                  "mask": 4,
                   "size": {
                     "w": 15,
                     "h": 17
