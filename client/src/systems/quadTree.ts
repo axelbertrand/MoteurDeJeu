@@ -1,204 +1,145 @@
-class Point {
-    public x: number; 
-    public y: number;
+import { ColliderComponent } from "../components/colliderComponent";
+import { vec2 } from "gl-matrix";
+import { Rectangle } from "../components/rectangle";
 
-    constructor (_x:number, _y:number){
-        this.x = _x;
-        this.y = _y;
-    }
-}
 
-class Node{
-    public pos: Point;
-    public data = 0;
-    constructor(_pos: Point, _data: number){
-        this.pos = _pos;
-        this.data = _data;
-    }
-}
 
 export class QuadTree {
-    // Hold details of the boundary of this node 
-    topLeft = new Point(0,0); 
-    botRight= new Point(0,0); 
-  
-    // Contains details of node 
-    n!: Node; 
-  
-    // Children of this tree 
-    topLeftTree!: QuadTree; 
-    topRightTree!: QuadTree; 
-    botLeftTree!: QuadTree; 
-    botRightTree!: QuadTree; 
-  
-
-    constructor(topL: Point, botR:Point) 
-    { 
-        this.topLeft = topL; 
-        this.botRight = botR; 
+ 
+    private MAX_OBJECTS: number = 3;
+    private MAX_LEVELS: number = 5;
+   
+    private level: number;
+    private colliders: ColliderComponent[] = [];
+    private bounds: Rectangle;
+    private nodes: QuadTree[] = [];
+   
+    public constructor(_level: number, _bounds: Rectangle) {
+     this.level = _level;
+     this.bounds = _bounds;
     }
 
-    insert(node: Node) 
-    { 
-        if (!node) 
-            return; 
-      
-        // Current quad cannot contain it 
-        if (!this.inBoundary(node.pos)) 
-            return; 
-      
-        // We are at a quad of unit area 
-        // We cannot subdivide this quad further 
-        if (Math.abs(this.topLeft.x - this.botRight.x) <= 1 && 
-            Math.abs(this.topLeft.y - this.botRight.y) <= 1) 
-        { 
-            if (!this.n) 
-                this.n = node; 
-            return; 
-        } 
-      
-        if ((this.topLeft.x + this.botRight.x) / 2 >= node.pos.x) 
-        { 
-            // Indicates topLeftTree 
-            if ((this.topLeft.y + this.botRight.y) / 2 >= node.pos.y) 
-            { 
-                if (!this.topLeftTree) 
-                {
-                    this.topLeftTree = new QuadTree( 
-                        new Point(this.topLeft.x, this.topLeft.y), 
-                        new Point((this.topLeft.x + this.botRight.x) / 2, 
-                            (this.topLeft.y + this.botRight.y) / 2)); 
-                }
-                this.topLeftTree.insert(node); 
-            } 
-      
-            // Indicates botLeftTree 
-            else
-            { 
-                if (!this.botLeftTree) 
-                {
-                    this.botLeftTree = new QuadTree( 
-                        new Point(this.topLeft.x, 
-                            (this.topLeft.y + this.botRight.y) / 2), 
-                        new Point((this.topLeft.x + this.botRight.x) / 2, 
-                            this.botRight.y));
-                }
-                this.botLeftTree.insert(node); 
-            } 
-        } 
-        else
-        { 
-            // Indicates topRightTree 
-            if ((this.topLeft.y + this.botRight.y) / 2 >= node.pos.y) 
-            { 
-                if (!this.topRightTree) 
-                {
-                    this.topRightTree = new QuadTree( 
-                        new Point((this.topLeft.x + this.botRight.x) / 2, 
-                            this.topLeft.y), 
-                        new Point(this.botRight.x, 
-                            (this.topLeft.y + this.botRight.y) / 2)); 
-                }
-                this.topRightTree.insert(node); 
-            } 
-      
-            // Indicates botRightTree 
-            else
-            { 
-                if (!this.botRightTree) 
-                {
-                    this.botRightTree = new QuadTree( 
-                        new Point((this.topLeft.x + this.botRight.x) / 2, 
-                            (this.topLeft.y + this.botRight.y) / 2), 
-                        new Point(this.botRight.x, this.botRight.y));
-                }
-                this.botRightTree.insert(node); 
-            } 
-        } 
+    clear()
+    {
+      this.colliders = [];
+      this.nodes.forEach(function (value) {
+        value.clear();
+        value.nodes = [];
+      });
     }
 
-    // Check if current quadtree contains the point 
-    inBoundary(p: Point) 
-    { 
-        return (p.x >= this.topLeft.x && 
-            p.x <= this.botRight.x && 
-            p.y >= this.topLeft.y && 
-            p.y <= this.botRight.y); 
+    split()
+    {
+      /*let botLeft1: [number, number] = this.bounds.botLeft;
+      let botLeft2: [number, number] = [this.bounds.botLeft[0] + this.bounds.w/2, this.bounds.botLeft[1]];
+      let botLeft3: [number, number] = [this.bounds.botLeft[0], this.bounds.botLeft[1] - this.bounds.h];
+      let botLeft4: [number, number] = [this.bounds.botLeft[0] + this.bounds.w/2, this.bounds.botLeft[1] - this.bounds.h];
+      this.nodes.push(new QuadTree(this.level+1, new Rectangle(botLeft1, this.bounds.w/2,this.bounds.h/2)));
+      this.nodes.push(new QuadTree(this.level+1, new Rectangle(botLeft2, this.bounds.w/2,this.bounds.h/2)));
+      this.nodes.push(new QuadTree(this.level+1, new Rectangle(botLeft3, this.bounds.w/2,this.bounds.h/2)));
+      this.nodes.push(new QuadTree(this.level+1, new Rectangle(botLeft4, this.bounds.w/2,this.bounds.h/2)));
+      */
+      let subWidth: number = (this.bounds.w / 2);
+      let subHeight: number = (this.bounds.h / 2);
+      let x: number = this.bounds.x;
+      let y: number = this.bounds.y;
+    
+      this.nodes.push(new QuadTree(this.level+1, new Rectangle({
+        x: x - subWidth/2,
+        y: y + subHeight/2,
+        width: subWidth,
+        height: subHeight,
+      })));
+      this.nodes.push(new QuadTree(this.level+1, new Rectangle({
+        x: x + subWidth/2,
+        y: y + subHeight/2,
+        width: subWidth,
+        height: subHeight,
+      })));
+      this.nodes.push(new QuadTree(this.level+1, new Rectangle({
+        x: x - subWidth/2,
+        y: y - subHeight/2,
+        width: subWidth,
+        height: subHeight,
+      })));
+      this.nodes.push(new QuadTree(this.level+1, new Rectangle({
+        x: x + subWidth/2,
+        y: y - subHeight/2,
+        width: subWidth,
+        height: subHeight,
+      })));
     }
 
-    // Find a node in a quadtree 
-    search(p: Point): Node|undefined
-    { 
-        // Current quad cannot contain it 
-        if (!this.inBoundary(p)) 
-            return undefined; 
-    
-        // We are at a quad of unit length 
-        // We cannot subdivide this quad further 
-        if (this.n) 
-            return this.n; 
-    
-        if ((this.topLeft.x + this.botRight.x) / 2 >= p.x) 
-        { 
-            // Indicates topLeftTree 
-            if ((this.topLeft.y + this.botRight.y) / 2 >= p.y) 
-            { 
-                if (!this.topLeftTree) 
-                    return undefined; 
-                return this.topLeftTree.search(p); 
-            } 
-    
-            // Indicates botLeftTree 
-            else
-            { 
-                if (!this.botLeftTree) 
-                    return undefined; 
-                return this.botLeftTree.search(p); 
-            } 
-        } 
-        else
-        { 
-            // Indicates topRightTree 
-            if ((this.topLeft.y + this.botRight.y) / 2 >= p.y) 
-            { 
-                if (!this.topRightTree) 
-                    return undefined; 
-                return this.topRightTree.search(p); 
-            } 
-    
-            // Indicates botRightTree 
-            else
-            { 
-                if (!this.botRightTree) 
-                    return undefined; 
-                return this.botRightTree.search(p); 
-            } 
-        } 
-    }; 
+    getIndex(_col: ColliderComponent): number
+    {
+      let res: number = -1;
+      let verticalMidpoint:number  = this.bounds.x;
+      let horizontalMidpoint:number = this.bounds.y;
 
-}; 
-  
-// Driver program 
-/*
-int main() 
-{ 
-    Quad center(Point(0, 0), Point(8, 8)); 
-    Node a(Point(1, 1), 1); 
-    Node b(Point(2, 5), 2); 
-    Node c(Point(7, 6), 3); 
-    center.insert(&a); 
-    center.insert(&b); 
-    center.insert(&c); 
-    cout << "Node a: " << 
-        center.search(Point(1, 1))->data << "\n"; 
-    cout << "Node b: " << 
-        center.search(Point(2, 5))->data << "\n"; 
-    cout << "Node c: " << 
-        center.search(Point(7, 6))->data << "\n"; 
-    cout << "Non-existing node: "
-        << center.search(Point(5, 5)); 
-    return 0; 
-}
-*/
+      let topQuadrant: boolean = (_col.area.yMin < horizontalMidpoint && _col.area.yMin + _col.area.h < horizontalMidpoint);
+      let bottomQuadrant: boolean = (_col.area.yMin > horizontalMidpoint);
 
+      // Object can completely fit within the left quadrants
+      if (_col.area.xMin < verticalMidpoint && _col.area.xMin + _col.area.w < verticalMidpoint) {
+        if (topQuadrant) {
+          res = 1;
+        }
+        else if (bottomQuadrant) {
+          res = 2;
+        }
+      }
+      // Object can completely fit within the right quadrants
+      else if (_col.area.xMin > verticalMidpoint) {
+      if (topQuadrant) {
+        res = 0;
+      }
+      else if (bottomQuadrant) {
+        res = 3;
+      }
+    }
+      return res;
+    }
+
+    public insert(_col: ColliderComponent) {
+      if (this.nodes[0]) {
+        let index:number = this.getIndex(_col);
     
+        if (index != -1) {
+          this.nodes[index].insert(_col);
+    
+          return;
+        }
+      }
+    
+      this.colliders.push(_col);
+    
+      if (this.colliders.length > this.MAX_OBJECTS && this.level < this.MAX_LEVELS) {
+         if (!this.nodes[0]) { 
+            this.split(); 
+         }
+    
+        let i: number = 0;
+        while (i < this.colliders.length) {
+          let index: number = this.getIndex(this.colliders[i]);
+          if (index != -1) {
+            this.nodes[index].insert(this.colliders[i]);
+            this.colliders.splice(i,1);
+          }
+          else {
+            i++;
+          }
+        }
+      }
+    }
+
+    public retrieve(returnColliders: ColliderComponent[], _col: ColliderComponent) {
+      let index: number = this.getIndex(_col);
+      if (index != -1 && this.nodes[0]) {
+        this.nodes[index].retrieve(returnColliders, _col);
+      }
+    
+      returnColliders.concat(this.colliders);
+    
+      return returnColliders;
+    }
+  }

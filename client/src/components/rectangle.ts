@@ -55,4 +55,24 @@ export class Rectangle {
       (this.yMax <= other.yMin)
     );
   }
+
+  get w()
+  {
+    return Math.abs(this.xMax - this.xMin);
+  }
+
+  get h()
+  {
+    return Math.abs(this.yMax - this.yMin);
+  }
+
+  get x()
+  {
+    return (this.xMax + this.xMin)/2;
+  }
+
+  get y()
+  {
+    return (this.yMax - this.yMin)/2;
+  }
 }
