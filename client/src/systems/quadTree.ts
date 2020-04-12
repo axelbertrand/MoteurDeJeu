@@ -6,13 +6,13 @@ import { Rectangle } from "../components/rectangle";
 
 export class QuadTree {
  
-    private MAX_OBJECTS: number = 3;
+    private MAX_OBJECTS: number = 10;
     private MAX_LEVELS: number = 5;
    
     private level: number;
     private colliders: ColliderComponent[] = [];
     private bounds: Rectangle;
-    private nodes: QuadTree[] = [];
+    private nodes: Array<QuadTree> = new Array<QuadTree>(4);
    
     public constructor(_level: number, _bounds: Rectangle) {
      this.level = _level;
@@ -22,9 +22,11 @@ export class QuadTree {
     clear()
     {
       this.colliders = [];
-      this.nodes.forEach(function (value) {
-        value.clear();
-        value.nodes = [];
+      this.nodes.forEach((node) => {
+        if(node != null) {
+          node.clear();
+          node.nodes = [];
+        }
       });
     }
 
@@ -44,37 +46,37 @@ export class QuadTree {
       let x: number = this.bounds.x;
       let y: number = this.bounds.y;
     
-      this.nodes.push(new QuadTree(this.level+1, new Rectangle({
-        x: x - subWidth/2,
-        y: y + subHeight/2,
+      this.nodes[0] = new QuadTree(this.level+1, new Rectangle({
+        x: x + subWidth,
+        y: y,
         width: subWidth,
         height: subHeight,
-      })));
-      this.nodes.push(new QuadTree(this.level+1, new Rectangle({
-        x: x + subWidth/2,
-        y: y + subHeight/2,
+      }));
+      this.nodes[1] = new QuadTree(this.level+1, new Rectangle({
+        x: x,
+        y: y,
         width: subWidth,
         height: subHeight,
-      })));
-      this.nodes.push(new QuadTree(this.level+1, new Rectangle({
-        x: x - subWidth/2,
-        y: y - subHeight/2,
+      }));
+      this.nodes[2] = new QuadTree(this.level+1, new Rectangle({
+        x: x,
+        y: y + subHeight,
         width: subWidth,
         height: subHeight,
-      })));
-      this.nodes.push(new QuadTree(this.level+1, new Rectangle({
-        x: x + subWidth/2,
-        y: y - subHeight/2,
+      }));
+      this.nodes[3] = new QuadTree(this.level+1, new Rectangle({
+        x: x + subWidth,
+        y: y + subHeight,
         width: subWidth,
         height: subHeight,
-      })));
+      }));
     }
 
     getIndex(_col: ColliderComponent): number
     {
       let res: number = -1;
-      let verticalMidpoint:number  = this.bounds.x;
-      let horizontalMidpoint:number = this.bounds.y;
+      let verticalMidpoint:number  = this.bounds.x + this.bounds.w / 2;
+      let horizontalMidpoint:number = this.bounds.y + this.bounds.h / 2;
 
       let topQuadrant: boolean = (_col.area.yMin < horizontalMidpoint && _col.area.yMin + _col.area.h < horizontalMidpoint);
       let bottomQuadrant: boolean = (_col.area.yMin > horizontalMidpoint);
@@ -132,14 +134,15 @@ export class QuadTree {
       }
     }
 
-    public retrieve(returnColliders: ColliderComponent[], _col: ColliderComponent) {
-      let index: number = this.getIndex(_col);
-      if (index != -1 && this.nodes[0]) {
-        this.nodes[index].retrieve(returnColliders, _col);
+    public retrieve(collider: ColliderComponent): ColliderComponent[]
+    {
+      if (this.nodes[0]) {
+        let index: number = this.getIndex(collider);
+        if (index != -1) {
+          return this.nodes[index].retrieve(collider);
+        }
       }
-    
-      returnColliders.concat(this.colliders);
-    
-      return returnColliders;
+
+      return this.colliders;
     }
   }

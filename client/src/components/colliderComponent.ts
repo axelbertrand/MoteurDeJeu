@@ -26,6 +26,7 @@ export class ColliderComponent extends Component<IColliderComponentDesc> {
   public flag!: number;
   public mask!: number;
   private size!: ISize;
+  public isColliding!: boolean;
 
   // ## Méthode *create*
   // Cette méthode est appelée pour configurer le composant avant
@@ -34,6 +35,7 @@ export class ColliderComponent extends Component<IColliderComponentDesc> {
     this.flag = descr.flag;
     this.mask = descr.mask;
     this.size = descr.size;
+    this.isColliding = false;
   }
 
   // ## Méthode *setup*
